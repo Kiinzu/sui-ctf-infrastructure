@@ -4,6 +4,10 @@ data/*.sqlite
 data/*.sqlite-*
 .env
 
+# editor / IDE
+.vscode/
+.idea/
+
 # python
 __pycache__/
 *.pyc

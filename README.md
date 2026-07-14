@@ -219,14 +219,52 @@ and validates the exact deploy + solve-check logic the containers use.
 ## Layout
 
 ```
-orchestrator/           FastAPI proxy + nc menu + reaper + registry (Python)
-  app/{config,pow,registry,sui_rpc,challenge,docker_manager,instances,proxy,ncserver,reaper,main}.py
-instance-image/         per-player Sui image: Dockerfile + entrypoint.sh
-challenges/
-  placeholder-flashpool/{challenge.yml, package/, solve/}
-scripts/                local_pipeline_test.sh + solvecheck_probe.py
-tests/                  pytest unit tests
-docker-compose.yml  Makefile  .env.example
+sui-ctf-infrastructure/
+├── challenges/                 # one directory per challenge
+│   └── placeholder-flashpool/
+│       ├── package/            # Move package (published inside the instance)
+│       │   ├── sources/
+│       │   │   └── pool.move
+│       │   ├── Move.lock
+│       │   └── Move.toml
+│       ├── solve/              # reference solver (JSON-RPC)
+│       │   ├── README.md
+│       │   └── solve.sh
+│       └── challenge.yml       # flag, deploy steps, solve-check, flag_mode
+├── instance-image/             # per-player Sui image
+│   ├── Dockerfile              # ubuntu:24.04 + pinned Sui + challenge pkgs
+│   └── entrypoint.sh           # boot sui, publish, seed, fund, write ready.json
+├── orchestrator/               # FastAPI proxy + nc menu + reaper + registry
+│   ├── app/
+│   │   ├── __init__.py
+│   │   ├── challenge.py        # challenge.yml loader + solve-check
+│   │   ├── config.py           # env-driven settings
+│   │   ├── docker_manager.py   # spawn/kill instance containers
+│   │   ├── instances.py        # spawn/kill/flag orchestration
+│   │   ├── main.py             # wires everything into one asyncio loop
+│   │   ├── ncserver.py         # the nc menu (raw TCP)
+│   │   ├── pow.py              # proof-of-work gate
+│   │   ├── proxy.py            # /<uuid> RPC reverse proxy
+│   │   ├── reaper.py           # TTL reaper
+│   │   ├── registry.py         # SQLite instance registry
+│   │   └── sui_rpc.py          # async JSON-RPC client (solve-checks)
+│   ├── Dockerfile
+│   └── requirements.txt
+├── scripts/
+│   ├── local_pipeline_test.sh  # end-to-end pipeline test (no Docker)
+│   └── solvecheck_probe.py
+├── tests/                      # 23 pytest unit tests
+│   ├── conftest.py
+│   ├── test_challenge.py
+│   ├── test_instances.py
+│   ├── test_pow.py
+│   ├── test_proxy.py
+│   └── test_registry.py
+├── .env.example
+├── .gitignore
+├── docker-compose.yml
+├── Makefile
+└── README.md
 ```
 
 ---
