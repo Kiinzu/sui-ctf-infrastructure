@@ -1,0 +1,67 @@
+# sui-ctf-infrastructure — one orchestrator container that spawns N throwaway
+# per-player Sui instance containers.
+#
+#   make build   # build both images (orchestrator + instance)
+#   make up      # start the orchestrator
+#   nc <host> 1337
+#
+# The `sui-instance` service is built but never started by compose — the
+# orchestrator launches instances from its image on demand.
+name: suictf
+
+networks:
+  suictf_net:
+    name: suictf_net
+
+services:
+  orchestrator:
+    build:
+      context: .
+      dockerfile: orchestrator/Dockerfile
+    image: sui-ctf-orchestrator:latest
+    container_name: suictf-orchestrator
+    restart: unless-stopped
+    environment:
+      # Host:port players see in their rpc_url. SET PUBLIC_HOST to your public IP/DNS.
+      # PUBLIC_PROXY_PORT is auto-derived from the proxy's published host port.
+      PUBLIC_HOST: ${PUBLIC_HOST:-localhost}
+      PUBLIC_PROXY_PORT: ${PROXY_PORT:-8080}
+      # The app always listens on 1337 (nc) / 8080 (proxy) INSIDE the container;
+      # the published host ports below are what the outside world connects to.
+      INSTANCE_IMAGE: sui-ctf-instance:latest
+      DOCKER_NETWORK: suictf_net
+      CHALLENGE: ${CHALLENGE:-placeholder-flashpool}
+      CHALLENGES_DIR: /challenges
+      DB_PATH: /data/registry.sqlite
+      INSTANCE_TTL_SECONDS: ${INSTANCE_TTL_SECONDS:-900}
+      MAX_INSTANCES_PER_IP: ${MAX_INSTANCES_PER_IP:-1}
+      MAX_TOTAL_INSTANCES: ${MAX_TOTAL_INSTANCES:-20}
+      POW_DIFFICULTY_BITS: ${POW_DIFFICULTY_BITS:-20}
+      INSTANCE_MEM: ${INSTANCE_MEM:-2g}
+      INSTANCE_NANO_CPUS: ${INSTANCE_NANO_CPUS:-1000000000}
+      INSTANCE_BOOT_TIMEOUT: ${INSTANCE_BOOT_TIMEOUT:-360}
+    ports:
+      # host_port:container_port — set NC_PORT / PROXY_PORT in .env to pick the
+      # public ports (players: `nc <host> $NC_PORT`, rpc `http://<host>:$PROXY_PORT/<uuid>`).
+      - "${NC_BIND:-0.0.0.0}:${NC_PORT:-1337}:1337"    # nc menu
+      - "${PROXY_BIND:-0.0.0.0}:${PROXY_PORT:-8080}:8080" # rpc proxy
+    volumes:
+      # Host Docker socket. On Colima/Docker-Desktop the host path differs — set
+      # DOCKER_SOCK (e.g. ${HOME}/.colima/default/docker.sock). Always mounted to
+      # /var/run/docker.sock inside, which the SDK uses by default.
+      - ${DOCKER_SOCK:-/var/run/docker.sock}:/var/run/docker.sock
+      - ./challenges:/challenges:ro
+      - ./data:/data
+    networks:
+      - suictf_net
+
+  # Built by `make build`, never `up`ed. The orchestrator runs it per player.
+  sui-instance:
+    build:
+      context: .
+      dockerfile: instance-image/Dockerfile
+      args:
+        SUI_VERSION: ${SUI_VERSION:-mainnet-v1.74.1}
+    image: sui-ctf-instance:latest
+    profiles: ["build-only"]
+    command: ["true"]

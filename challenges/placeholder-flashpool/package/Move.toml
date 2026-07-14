@@ -1,0 +1,13 @@
+[package]
+name = "challenge"
+edition = "2024.beta"
+
+# The Sui framework is provided as a system dependency by the `sui` CLI bundled
+# in the instance image, so we don't pin it via git here (keeps `sui move build`
+# and `sui client publish` fully offline inside the container). If you need to
+# pin it explicitly for a real challenge, add:
+#   [dependencies]
+#   Sui = { git = "https://github.com/MystenLabs/sui.git", subdir = "crates/sui-framework/packages/sui-framework", rev = "framework/mainnet" }
+
+[addresses]
+challenge = "0x0"

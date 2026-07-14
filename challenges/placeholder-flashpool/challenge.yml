@@ -1,0 +1,49 @@
+# Placeholder challenge manifest (Paradigm / TCP1P-Extended style).
+#
+# Everything per-challenge lives here. To swap in the real challenge, drop its
+# Move package under this dir, point `package_path` at it, adjust `deploy` +
+# `solve`, and set the `flag`. The orchestrator reads this file at startup.
+
+name: placeholder-flashpool
+description: "Drain the whale pool to zero, then grab the flag."
+
+# The flag. Kept server-side only (never sent to the instance container) when
+# flag_mode is server_issued. Swap for your real, unique flag.
+flag: "flag{placeholder_p00l_dr41ned_pipeline_0k}"
+
+# Sui release the instance image runs. Matches the local CLI (1.74.1) this repo
+# was validated against; keep it in sync with the package's framework rev.
+sui_version: "mainnet-v1.74.1"
+
+# Per-instance lifetime (seconds). Falls back to INSTANCE_TTL_SECONDS if unset.
+ttl_seconds: 900
+
+# Move package to publish at spawn, relative to this challenge directory.
+package_path: "package"
+
+# How many faucet grants the fresh player keypair receives at spawn.
+player_faucet_coins: 3
+
+# Deploy steps executed (in order) by the deployer key right after publish.
+# Each maps to one `sui client call` against the just-published package.
+deploy:
+  - module: "pool"
+    function: "init_pool"
+    type_args: []
+    args: ["1000000"]
+
+# Solve-check run by the /flag (nc option 3) path against the instance RPC.
+#   type: state -> read a created object's field and compare it
+#   type: event -> look for an emitted Move event type (on-chain-claim style)
+solve:
+  type: state
+  object_type: "::pool::Pool"   # suffix-matched against created object types
+  field: "balance"
+  op: "eq"                      # one of: eq, ne, lt, lte, gt, gte
+  value: 0
+
+# Flag delivery once the solve-check passes:
+#   server_issued  -> backend returns `flag` above (flag never touches chain)
+#   on_chain_claim -> pair with solve.type: event; player's exploit calls the
+#                     on-chain claim fn and the backend confirms via the event
+flag_mode: server_issued

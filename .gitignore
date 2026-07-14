@@ -1,0 +1,18 @@
+# local scratch / runtime state
+tmp/
+data/*.sqlite
+data/*.sqlite-*
+.env
+
+# python
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+
+# move build artifacts
+challenges/*/package/build/
+challenges/**/build/
+# ephemeral test-publish files (Sui says not to commit these)
+Pub.*.toml
+challenges/**/Pub.*.toml
